@@ -1,4 +1,4 @@
-# Ta .3d0 to .obj converter
+# Ta .3do to .obj converter
 
 To use this tool you do: 
 
