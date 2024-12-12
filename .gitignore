@@ -1,5 +1,6 @@
 /target
 *.3do
 *.obj
+*.mtl
 textures/
 gaf_textures/
