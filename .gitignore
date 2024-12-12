@@ -1,3 +1,5 @@
 /target
 *.3do
 *.obj
+textures/
+gaf_textures/

@@ -8,6 +8,12 @@ use std::fs::{self, File};
 use std::io::{BufWriter, Write};
 use std::mem;
 
+mod palette;
+use palette::{colour_name, PALETTE};
+
+mod gaf_extractor;
+use gaf_extractor::extract_textures_from_gafs;
+
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
@@ -133,6 +139,8 @@ fn traverse(
     object: &TagObject,
     n_verticies_written: &mut u32,
     parent_offset: Offset,
+    used_colours: &mut Vec<[u8; 3]>,
+    used_textures: &mut Vec<String>,
     indent: usize,
 ) {
     let offset = Offset {
@@ -147,6 +155,8 @@ fn traverse(
         &object,
         n_verticies_written,
         offset,
+        used_colours,
+        used_textures,
         indent,
     );
 
@@ -161,6 +171,8 @@ fn traverse(
             &child,
             n_verticies_written,
             offset,
+            used_colours,
+            used_textures,
             indent + 1,
         );
     }
@@ -176,6 +188,8 @@ fn traverse(
             &sibling,
             n_verticies_written,
             parent_offset,
+            used_colours,
+            used_textures,
             indent + 1,
         );
     }
@@ -187,7 +201,9 @@ fn diplay_data(
     object: &TagObject,
     n_verticies_written: &mut u32,
     parent_offset: Offset,
-    indent: usize,
+    used_colours: &mut Vec<[u8; 3]>,
+    used_textures: &mut Vec<String>,
+    _indent: usize,
 ) {
     buf.seek(object.offset_to_object_name.into());
     let name = buf.read_string();
@@ -214,17 +230,37 @@ fn diplay_data(
 
     let primatives = read_primatives(buf, object);
     for p in primatives {
+        // non-rendered/clear material
+        if p.is_colored == 0 && p.offset_to_texture_name == 0 {
+            continue;
+        }
+        // textured material
+        else if p.offset_to_texture_name != 0 {
+            buf.seek(p.offset_to_texture_name.into());
+            let texture_name = buf.read_string();
+            writeln!(obj_writter, "usemtl {}", texture_name).unwrap();
+            used_textures.push(texture_name);
+        }
+        // coloured material
+        else {
+            let colour = PALETTE[p.color_index as usize];
+            let colour_name = colour_name(colour);
+            writeln!(obj_writter, "usemtl {}", colour_name).unwrap();
+            used_colours.push(colour);
+        }
+
         write!(obj_writter, "f").unwrap();
 
         buf.seek(p.offset_to_vertex_index_array.into());
-        for _ in 0..p.number_of_vertex_indexes {
+        for i in 0..p.number_of_vertex_indexes {
             let vertex_index = read_struct::<u16>(buf);
             buf.seek_relative(mem::size_of::<u16>() as i64);
 
             write!(
                 obj_writter,
-                " {}",
-                *n_verticies_written + (vertex_index as u32) + 1
+                " {}/{}",
+                *n_verticies_written + (vertex_index as u32) + 1,
+                i + 1
             )
             .unwrap();
         }
@@ -249,8 +285,18 @@ fn main() {
         BufWriter::new(file)
     };
 
+    writeln!(obj_writter, "mtllib {}", file_name.to_owned() + ".mtl").unwrap();
+    writeln!(obj_writter).unwrap();
+    writeln!(obj_writter, "vt 1 1").unwrap();
+    writeln!(obj_writter, "vt 0 1").unwrap();
+    writeln!(obj_writter, "vt 0 0").unwrap();
+    writeln!(obj_writter, "vt 1 0").unwrap();
+
     let root_object = read_struct::<TagObject>(&mut buffer);
     let mut n_verticies_written = 0;
+
+    let mut used_colours = Vec::new();
+    let mut used_textures = Vec::new();
 
     traverse(
         &mut buffer,
@@ -258,6 +304,32 @@ fn main() {
         &root_object,
         &mut n_verticies_written,
         Offset { x: 0, y: 0, z: 0 },
+        &mut used_colours,
+        &mut used_textures,
         0,
     );
+
+    {
+        let file = File::create(file_name.to_owned() + ".mtl").expect("unable to create file");
+        let mut mtl_writter = BufWriter::new(file);
+
+        for colour in used_colours {
+            writeln!(mtl_writter, "newmtl {}", colour_name(colour)).unwrap();
+            write!(mtl_writter, "Kd").unwrap();
+            write!(mtl_writter, " {}", colour[0] as f32 / 256.0).unwrap();
+            write!(mtl_writter, " {}", colour[1] as f32 / 256.0).unwrap();
+            write!(mtl_writter, " {}", colour[2] as f32 / 256.0).unwrap();
+            writeln!(mtl_writter).unwrap();
+            writeln!(mtl_writter).unwrap();
+        }
+
+        for texture in &used_textures {
+            writeln!(mtl_writter, "newmtl {}", texture).unwrap();
+            writeln!(mtl_writter, "map_Kd ./textures/{}.bmp", texture).unwrap();
+            writeln!(mtl_writter).unwrap();
+        }
+    };
+
+    // OKAY NOW WE HAVE TO EXTRACT THE TEXTURES FROM THE GAF FILES!! FUN!
+    extract_textures_from_gafs(&used_textures);
 }
