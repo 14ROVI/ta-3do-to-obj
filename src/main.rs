@@ -208,9 +208,6 @@ fn diplay_data(
     buf.seek(object.offset_to_object_name.into());
     let name = buf.read_string();
 
-    // println!("{}{}", " ".repeat(indent * 2), name);
-    // println!("{}{:?}", " ".repeat(indent * 2), parent_offset);
-
     writeln!(obj_writter).unwrap();
     writeln!(obj_writter, "o {}", name).unwrap();
 
@@ -331,5 +328,5 @@ fn main() {
     };
 
     // OKAY NOW WE HAVE TO EXTRACT THE TEXTURES FROM THE GAF FILES!! FUN!
-    extract_textures_from_gafs(&used_textures);
+    extract_textures_from_gafs(&used_textures, "./gaf_textures/", "./textures/");
 }

@@ -1,7 +1,6 @@
 use serde::Deserialize;
 use std::fs;
 use std::mem::size_of;
-
 extern crate bmp;
 use bmp::Image;
 use bmp::Pixel;
@@ -70,7 +69,7 @@ fn read_image(buf: &mut Buffer, width: u16, height: u16, compressed: u8) -> Imag
 
                 if (mask & 0x01) == 0x01 {
                     for _ in 0..(mask >> 1) {
-                        raw.push(0)
+                        raw.push(0);
                     }
                 } else if (mask & 0x02) == 0x02 {
                     let byte = read_struct::<u8>(buf);
@@ -103,7 +102,7 @@ fn read_image(buf: &mut Buffer, width: u16, height: u16, compressed: u8) -> Imag
     return image;
 }
 
-fn extract_gaf(buf: &mut Buffer, used_textures: &Vec<String>) {
+fn extract_gaf(buf: &mut Buffer, used_textures: &Vec<String>, extract_folder: &str) {
     let header = read_struct::<GafHeader>(buf);
     buf.seek_relative(size_of::<GafHeader>() as i64);
 
@@ -142,22 +141,21 @@ fn extract_gaf(buf: &mut Buffer, used_textures: &Vec<String>) {
                 frame_data.height,
                 frame_data.compressed,
             );
-            let _ = image.save(format!("./textures./{}.bmp", name));
+            let _ = image.save(format!("{extract_folder}{}.bmp", name));
         }
     }
 }
 
-pub fn extract_textures_from_gafs(used_textures: &Vec<String>) {
-    // traverse through the gaf files
-    // find the used textures
-    // extract the first frame
-    // save as a .bmp
-
-    let gaf_files = fs::read_dir("./gaf_textures/").unwrap();
+pub fn extract_textures_from_gafs(
+    used_textures: &Vec<String>,
+    gaf_folder: &str,
+    extract_folder: &str,
+) {
+    let gaf_files = fs::read_dir(gaf_folder).unwrap();
 
     for gaf in gaf_files.flatten() {
         let data = fs::read(gaf.path()).unwrap();
         let mut buf = Buffer::new(data);
-        extract_gaf(&mut buf, used_textures);
+        extract_gaf(&mut buf, used_textures, extract_folder);
     }
 }
