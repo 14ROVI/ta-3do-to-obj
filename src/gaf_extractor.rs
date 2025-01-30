@@ -141,7 +141,7 @@ fn extract_gaf(buf: &mut Buffer, used_textures: &Vec<String>, extract_folder: &s
                 frame_data.height,
                 frame_data.compressed,
             );
-            let _ = image.save(format!("{extract_folder}{}.bmp", name));
+            let _ = image.save(format!("{}{}.bmp", extract_folder, name));
         }
     }
 }
@@ -151,11 +151,14 @@ pub fn extract_textures_from_gafs(
     gaf_folder: &str,
     extract_folder: &str,
 ) {
-    let gaf_files = fs::read_dir(gaf_folder).unwrap();
-
-    for gaf in gaf_files.flatten() {
-        let data = fs::read(gaf.path()).unwrap();
-        let mut buf = Buffer::new(data);
-        extract_gaf(&mut buf, used_textures, extract_folder);
+    if let Ok(gaf_files) = fs::read_dir(gaf_folder) {
+        fs::create_dir_all(extract_folder).unwrap();
+        for gaf in gaf_files.flatten() {
+            let data = fs::read(gaf.path()).unwrap();
+            let mut buf = Buffer::new(data);
+            extract_gaf(&mut buf, used_textures, extract_folder);
+        }
+    } else {
+        println!("To have textures in your .obj create a folder named gaf_textures in this directory and copy all .gaf files from the game to it.");
     }
 }

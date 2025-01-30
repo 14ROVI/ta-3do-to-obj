@@ -329,4 +329,6 @@ fn main() {
 
     // OKAY NOW WE HAVE TO EXTRACT THE TEXTURES FROM THE GAF FILES!! FUN!
     extract_textures_from_gafs(&used_textures, "./gaf_textures/", "./textures/");
+
+    println!("Convert completed!");
 }
