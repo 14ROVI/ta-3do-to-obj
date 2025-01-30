@@ -218,7 +218,7 @@ fn diplay_data(
         writeln!(
             obj_writter,
             "v {} {} {}",
-            (parent_offset.x + x) / *SCALE_FACTOR,
+            -(parent_offset.x + x) / *SCALE_FACTOR,
             (parent_offset.y + y) / *SCALE_FACTOR,
             (parent_offset.z + z) / *SCALE_FACTOR
         )
@@ -284,10 +284,10 @@ fn main() {
 
     writeln!(obj_writter, "mtllib {}", file_name.to_owned() + ".mtl").unwrap();
     writeln!(obj_writter).unwrap();
-    writeln!(obj_writter, "vt 1 1").unwrap();
     writeln!(obj_writter, "vt 0 1").unwrap();
-    writeln!(obj_writter, "vt 0 0").unwrap();
+    writeln!(obj_writter, "vt 1 1").unwrap();
     writeln!(obj_writter, "vt 1 0").unwrap();
+    writeln!(obj_writter, "vt 0 0").unwrap();
 
     let root_object = read_struct::<TagObject>(&mut buffer);
     let mut n_verticies_written = 0;
